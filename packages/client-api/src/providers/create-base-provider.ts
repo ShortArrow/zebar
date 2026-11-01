@@ -84,7 +84,6 @@ export function createBaseProvider<
   function startFetcher() {
     return fetcher({
       output: output => {
-        logger.debug('Provider output:', output);
         latestEmission = { output, error: null, hasError: false };
         outputListeners.forEach(listener => listener(output));
       },
