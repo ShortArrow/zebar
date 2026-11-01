@@ -41,6 +41,7 @@ mod common;
 mod config_migration;
 mod marketplace_installer;
 mod monitor_state;
+mod panic_log;
 mod providers;
 mod publish;
 mod shell_state;
@@ -57,6 +58,8 @@ extern crate rocket;
 /// subcommand.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+  panic_log::install_panic_hook();
+
   // Attach to parent console on Windows in release mode.
   #[cfg(all(windows, not(debug_assertions)))]
   {
