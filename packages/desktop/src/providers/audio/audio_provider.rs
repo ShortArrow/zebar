@@ -626,3 +626,54 @@ impl IMMNotificationClient_Impl for DeviceCallback_Impl {
     Ok(())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use windows_core::w;
+
+  use super::*;
+
+  /// Sends a default-device change to `DeviceCallback` through its COM
+  /// interface, the way MMDevAPI delivers it, and returns the event the
+  /// callback queued.
+  fn notify_default_device_changed(
+    default_device_id: PCWSTR,
+  ) -> (windows::core::Result<()>, Option<AudioEvent>) {
+    let (event_tx, event_rx) = channel::unbounded();
+    let client: IMMNotificationClient = DeviceCallback { event_tx }.into();
+
+    let result = unsafe {
+      client.OnDefaultDeviceChanged(
+        eRender,
+        eMultimedia,
+        default_device_id,
+      )
+    };
+
+    (result, event_rx.try_recv().ok())
+  }
+
+  #[test]
+  fn null_default_device_id_is_reported_as_no_default_device() {
+    let (result, event) = notify_default_device_changed(PCWSTR::null());
+
+    assert!(result.is_ok());
+    assert!(matches!(
+      event,
+      Some(AudioEvent::DefaultDeviceChanged(None, DeviceType::Playback))
+    ));
+  }
+
+  #[test]
+  fn default_device_id_is_reported_as_the_new_default_device() {
+    let (result, event) =
+      notify_default_device_changed(w!("{0.0.0.00000000}.{test}"));
+
+    assert!(result.is_ok());
+    assert!(matches!(
+      event,
+      Some(AudioEvent::DefaultDeviceChanged(Some(id), DeviceType::Playback))
+        if id == "{0.0.0.00000000}.{test}"
+    ));
+  }
+}
